@@ -15,6 +15,7 @@
       'src/element-animatable.js',
       'src/interpolation.js',
       'src/number-handler.js',
+      'src/motion-handler.js',
       'src/player.js',
       'src/timeline.js',
       'src/transform-handler.js');
