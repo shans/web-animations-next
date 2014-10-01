@@ -53,14 +53,18 @@
   function pathLength(path) {
     var length = [];
     var offset = [0, 0];
+    var subpath = [0, 0];
     for (var i = 0; i < path.length; i++) {
-      length.push(pathSegmentLength(path[i], offset));
+      length.push(pathSegmentLength(path[i], offset, subpath));
       offset = length[length.length - 1].offset;
+      subpath = length[length.length - 1].subpath;
     }
     return length;
   }
 
-  function pathSegmentLength(segment, offset) {
+  // Calculates the length of the given segment, and returns both it and the offset after
+  // the segment is applied.
+  function pathSegmentLength(segment, offset, subpath) {
     switch(segment[0]) {
     case 'l':
       var l = Math.sqrt(segment[1] * segment[1] + segment[2] * segment[2]);
@@ -70,39 +74,132 @@
       var y = segment[2] - offset[1];
       var l = Math.sqrt(x * x + y * y);
       break;
+    case 'h':
+    case 'v':
+      var l = segment[1];
+      break;
+    case 'H':
+      var l = segment[1] - offset[0];
+      break;
+    case 'V':
+     var l = segment[1] - offset[1];
+     break;
+    case 'm':
+      var l = 0;
+      subpath = [segment[1] + offset[0], segment[2] + offset[1]];
+      break;
+    case 'M':
+      var l = 0;
+      subpath = [segment[1], segment[2]];
+      break;
+    case 'z':
+    case 'Z':
+      var x = offset[0] - subpath[0];
+      var y = offset[1] - subpath[1];
+      var l = Math.sqrt(x * x + y * y);
+      break;
     default:
       console.error('path segment type ' + segment[0] + ' not implemented');
     }
-    return {length: l, offset: pathSegmentPosition(1, segment, offset)};
+    return {length: l, offset: pathSegmentPosition(1, segment, offset, subpath), subpath: subpath};
   }
 
-  function pathSegmentPosition(fraction, segment, offset) {
+  function f(a, b, c, d, m) {
+    return a * (1 - m) * (1 - m) * (1 - m) + 3 * b * (1 - m) * (1 - m) * m + 3 * c * (1 - m) * m * m + d * m * m * m
+  };
+
+  // finds a t value within 0.001 of distance away from the provided current_t
+  function distanceAlongCubic(x0, y0, x1, y1, x2, y2, x3, y3, current_t, distance) {
+    var start = current_t;
+    var end = current_t + distance;
+    var x = f(x0, x1, x2, x3, current_t);
+    var y = f(y0, y1, y2, y3, current_t);
+
+    while (1) {
+      var xE = f(x0, x1, x2, x3, end) - x;
+      var yE = f(y0, y1, y2, y3, end) - y;
+      if (Math.sqrt(xE * xE + yE * yE) < distance) {
+	end += distance;
+      } else {
+	break;
+      }
+    }
+
+    while (1) {
+      var mid = (start + end) / 2;
+      var xEst = f(x0, x1, x2, x3, mid) - x;
+      var yEst = f(y0, y1, y2, y3, mid) - y;
+      var dEst = Math.sqrt(xEst * xEst + yEst * yEst);
+      if (Math.abs(dEst - distance) < 0.001) {
+        return mid;
+      }
+      if (dEst < distance)
+        start = mid;
+      else
+        end = mid;
+    }
+  }
+
+  // Calculates the position on the current segment at local fraction, with the segment
+  // starting at the provided offset.
+  function pathSegmentPosition(fraction, segment, offset, subpath) {
     switch(segment[0]) {
     case 'l':
       return [offset[0] + segment[1] * fraction, offset[1] + segment[2] * fraction];
     case 'L':
       return [offset[0] + (segment[1] - offset[0]) * fraction, offset[1] + (segment[2] - offset[1]) * fraction];
+    case 'm':
+      if (fraction > 0) {
+	return [offset[0] + segment[1], offset[1] + segment[2]];
+      }
+    case 'M':
+      if (fraction > 0) {
+	return [segment[1], segment[2]];
+      }
+      return offset;
+    case 'h':
+      return [offset[0] + segment[1] * fraction, offset[1]];
+    case 'H':
+      return [offset[0] + (segment[1] - offset[0]) * fraction, offset[1]];
+    case 'v':
+      return [offset[0], offset[1] + segment[1] * fraction];
+    case 'V':
+      return [offset[0], offset[1] + (segment[1] - offset[1]) * fraction];
+    case 'z':
+    case 'Z':
+      return [offset[0] + (subpath[0] - offset[0]) * fraction, offset[1] + (subpath[1] - offset[1]) * fraction];
     default:
       console.error('path segment type ' + segment[0] + ' not implemented');
     }
   };
 
-  function applyMotion(motion) {
-    var path = parsePath(motion.path);
-    var position = scope.parseNumber(motion.position);
-    var length = pathLength(path);
+  function deriveMotionData(path) {
+    var cachedMotionData = {};
+    cachedMotionData.path = parsePath(path);
+    cachedMotionData.length = pathLength(cachedMotionData.path);
     var totalLength = 0;
-    for (var i = 0; i < length.length; i++) {
-      totalLength += length[i].length;
+    for (var i = 0; i < cachedMotionData.length.length; i++) {
+      totalLength += cachedMotionData.length[i].length;
     }
+    cachedMotionData.totalLength = totalLength;
+    return cachedMotionData;
+  }
+
+  function applyMotion(motion) {
+    var position = scope.parseNumber(motion.position);
+    if (motion.cachedMotionData[motion.path] == undefined) {
+      motion.cachedMotionData[motion.path] = deriveMotionData(motion.path);
+    }
+    var data = motion.cachedMotionData[motion.path];
     var segment = 0;
-    var position = position * totalLength;
-    while (position > length[segment].length) {
-      position -= length[segment].length;
+    var position = position * data.totalLength;
+    while (position > data.length[segment].length) {
+      position -= data.length[segment].length;
       segment += 1;
     }
-    var offset = segment > 0 ? length[segment - 1].offset : [0, 0];
-    var p = pathSegmentPosition(position / length[segment].length, path[segment], offset);
+    var offset = segment > 0 ? data.length[segment - 1].offset : [0, 0];
+    var subpath = segment > 0 ? data.length[segment - 1].subpath : [0, 0];
+    var p = pathSegmentPosition(position / data.length[segment].length, data.path[segment], offset, subpath);
     return 'translate(' + p[0] + 'px, ' + p[1] + 'px)';
   }
 
@@ -130,7 +227,7 @@
         element._transform = ['', ''];
       if (isMotion) {
         if (element._motion == undefined) {
-          element._motion = {path: '', position: 0};
+          element._motion = {path: '', position: 0, cachedMotionData: {}};
         }
         element._motion[property.substring(6).toLowerCase()] = value;
         value = applyMotion(element._motion);
