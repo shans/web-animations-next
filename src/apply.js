@@ -16,6 +16,7 @@
 
   scope.apply = function(element, property, value) {
     element.style[scope.propertyName(property)] = value;
+    invalidate_(element);
   };
 
   scope.clear = function(element, property) {

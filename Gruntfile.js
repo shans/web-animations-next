@@ -102,12 +102,20 @@ module.exports = function(grunt) {
     WEB_ANIMATIONS_TESTING: false
   };
 
-  function buildMinifill(target) {
+  function buildMinifill(target, forced) {
     var config = targetConfig[target];
     return genTarget(target).concat([
       concat(config.scopeSrc.concat(config.sharedSrc).concat(config.minifillSrc), 'inter-raw-' + target + '.js', concatDefines),
       guard('inter-raw-' + target + '.js', 'inter-' + target + '.js'),
       compress('inter-' + target + '.js', target + '.min.js', concatDefines)
+    ]);
+  }
+
+ function buildForcedMinifill(target) {
+    var config = targetConfig[target];
+    return genTarget(target).concat([
+      concat(config.scopeSrc.concat(config.sharedSrc).concat(config.minifillSrc), 'inter-raw-' + target + '.js', concatDefines),
+      compress('inter-raw-' + target + '.js', target + '-forced.min.js', concatDefines)
     ]);
   }
 
@@ -125,6 +133,7 @@ module.exports = function(grunt) {
   }
 
   grunt.registerTask('web-animations', buildMinifill('web-animations'));
+  grunt.registerTask('web-animations-forced', buildForcedMinifill('web-animations'));
   grunt.registerTask('web-animations-next', buildMaxifill('web-animations-next'));
   grunt.registerTask('web-animations-next-lite', buildMaxifill('web-animations-next-lite'));
 
@@ -275,5 +284,5 @@ module.exports = function(grunt) {
     });
   });
 
-  grunt.task.registerTask('default', ['web-animations', 'web-animations-next', 'web-animations-next-lite', 'gjslint']);
+  grunt.task.registerTask('default', ['web-animations', 'web-animations-forced', 'web-animations-next', 'web-animations-next-lite', 'gjslint']);
 };

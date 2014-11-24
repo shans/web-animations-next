@@ -8,7 +8,7 @@
       'src/effect.js',
       'src/property-interpolation.js',
       'src/animation.js',
-      'src/apply-preserving-inline-style.js',
+      'src/apply.js',
       'src/element-animatable.js',
       'src/interpolation.js',
       'src/matrix-interpolation.js',
@@ -26,6 +26,7 @@
       'src/font-weight-handler.js',
       'src/position-handler.js',
       'src/shape-handler.js',
+      'src/custom-handler.js',
       'src/property-names.js',
   ];
 
