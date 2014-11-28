@@ -17,9 +17,7 @@
   var consumeNumber = scope.consumeParenthesised.bind(null, scope.parseNumber);
   var consumeNumberList = scope.consumeRepeated.bind(undefined, consumeNumber, /^/);
   function parseNumberList(string) {
-    console.log(string);
     var result = consumeNumberList(string);
-    console.log(result);
     if (result && result[1] == '') {
       return result[0];
     }
