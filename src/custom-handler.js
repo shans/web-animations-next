@@ -34,4 +34,12 @@
         return;
     }
   };
+
+  window.addCustomListHandler = function(property, type) {
+    switch (type) {
+      case 'number':
+        scope.addPropertiesListHandler(scope.parseNumber, scopr.mergeNumbers, [property]);
+        return;
+    }
+  };
 })(webAnimationsMinifill);

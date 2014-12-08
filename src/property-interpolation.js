@@ -20,22 +20,42 @@
     propertyHandlers[property] = propertyHandlers[property] || [];
     propertyHandlers[property].push([parser, merger]);
   }
-  function addPropertiesHandler(parser, merger, properties) {
+
+  function addPropertyListHandler(parser, merger, property) {
+  }
+
+  function _addHandlers(parser, merger, properties, addHandler) {
     for (var i = 0; i < properties.length; i++) {
       var property = properties[i];
       WEB_ANIMATIONS_TESTING && console.assert(property.toLowerCase() === property);
       addPropertyHandler(parser, merger, property);
       if (/-/.test(property)) {
         // Add camel cased variant.
-        addPropertyHandler(parser, merger, property.replace(/-(.)/g, function(_, c) {
+        addHandler(parser, merger, property.replace(/-(.)/g, function(_, c) {
           return c.toUpperCase();
         }));
       }
     }
   }
-  scope.addPropertiesHandler = addPropertiesHandler;
+
+  scope.addPropertiesHandler = function(parser, merger, properties) {
+    _addHandlers(parser, merger, properties, addPropertyHandler);
+  }
+
+  scope.addPropertiesListHandler = function(parser, merger, properties) {
+    _addHandlers(parser, merger, properties, addPropertyListHandler);
+  }
+
 
   function propertyInterpolation(property, left, right) {
+    var match = /\d+$/.exec(property);
+    if (match) {
+      var num = match[0];
+      property = property.substring(0, property.length - num.length - 1);
+      num = Number(num);
+    } else {
+      var num = undefined;
+    }
     var handlers = left == right ? [] : propertyHandlers[property];
     for (var i = 0; handlers && i < handlers.length; i++) {
       var parsedLeft = handlers[i][0](left);
