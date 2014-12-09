@@ -22,13 +22,14 @@
   }
 
   function addPropertyListHandler(parser, merger, property) {
+    addPropertyHandler(parser, merger, property + '-*');
   }
 
   function _addHandlers(parser, merger, properties, addHandler) {
     for (var i = 0; i < properties.length; i++) {
       var property = properties[i];
       WEB_ANIMATIONS_TESTING && console.assert(property.toLowerCase() === property);
-      addPropertyHandler(parser, merger, property);
+      addHandler(parser, merger, property);
       if (/-/.test(property)) {
         // Add camel cased variant.
         addHandler(parser, merger, property.replace(/-(.)/g, function(_, c) {
@@ -40,21 +41,20 @@
 
   scope.addPropertiesHandler = function(parser, merger, properties) {
     _addHandlers(parser, merger, properties, addPropertyHandler);
-  }
+  };
 
   scope.addPropertiesListHandler = function(parser, merger, properties) {
     _addHandlers(parser, merger, properties, addPropertyListHandler);
-  }
+  };
 
 
   function propertyInterpolation(property, left, right) {
     var match = /\d+$/.exec(property);
+    // FIXME: Make this work for camel case variants. Extract match function
+    // and use everywhere.
     if (match) {
       var num = match[0];
-      property = property.substring(0, property.length - num.length - 1);
-      num = Number(num);
-    } else {
-      var num = undefined;
+      property = property.substring(0, property.length - num.length) + '*';
     }
     var handlers = left == right ? [] : propertyHandlers[property];
     for (var i = 0; handlers && i < handlers.length; i++) {
@@ -65,8 +65,12 @@
         if (interpolationArgs) {
           var interp = scope.Interpolation.apply(null, interpolationArgs);
           return function(t) {
+            /*
             if (t == 0) return left;
             if (t == 1) return right;
+            */
+            // HACK: TODO: Fix this by uncommenting the above and just not
+            // coercing everything to a string if it's a list property.
             return interp(t);
           };
         }

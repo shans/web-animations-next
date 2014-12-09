@@ -14,13 +14,31 @@
 
 (function(scope, testing) {
 
+
   scope.apply = function(element, property, value) {
-    element.style[scope.propertyName(property)] = value;
-    // invalidate_(element);
+    var match = /\d+$/.exec(property);
+    if (match) {
+      var num = match[0];
+      property = property.substring(0, property.length - num.length - 1);
+      num = Number(num);
+      var pName = scope.propertyName(property);
+      if (element.style[pName] == undefined)
+        element.style[pName] = [];
+      if (value == undefined) {
+        delete element.style[pName][num];
+      } else {
+        element.style[pName][num] = value;
+      }
+
+      // FIXME: invalidation hack
+      element.style[pName] = element.style[pName];
+    } else {
+      element.style[scope.propertyName(property)] = value;
+    }
   };
 
   scope.clear = function(element, property) {
-    element.style[scope.propertyName(property)] = '';
+    scope.apply(element, property, undefined);
   };
 
 })(webAnimationsMinifill, webAnimationsTesting);

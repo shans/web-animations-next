@@ -24,6 +24,26 @@
   }
   var mergeNumberList = scope.mergeNestedRepeated.bind(undefined, scope.mergeNumbers, ' ');
 
+  function parseListOfNumbers(string) {
+    var result = consumeListOfNumbers(string);
+    if (result && result[1] == '') {
+      if (result[0].length == undefined) {
+        return [result[0]];
+      }
+      return result[0];
+    }
+  };
+
+  var consumeListOfNumbers = scope.consumeRepeated.bind(undefined, consumeNumber, /^,/);
+
+  var mergeListOfNumbers = function(left, right) {
+    while (left.length > right.length)
+      right.push(0);
+    while (right.length > left.length)
+      left.push(0);
+    return [left, right, function(l) { return l.map(function(n) { return n + ''; }); }];
+  };
+
   window.addCustomHandler = function(property, type) {
     switch (type) {
       case 'number':
@@ -32,14 +52,18 @@
       case 'list<number>':
         scope.addPropertiesHandler(parseNumberList, mergeNumberList, [property]);
         return;
+      case 'list*<number>':
+        scope.addPropertiesHandler(parseListOfNumbers, mergeListOfNumbers, [property]);
+        return;
     }
   };
 
   window.addCustomListHandler = function(property, type) {
     switch (type) {
       case 'number':
-        scope.addPropertiesListHandler(scope.parseNumber, scopr.mergeNumbers, [property]);
-        return;
+        scope.addPropertiesListHandler(scope.parseNumber, scope.mergeNumbers, [property]);
+        break;
     }
+    window.addCustomHandler(property, 'list*<' + type + '>');
   };
 })(webAnimationsMinifill);
